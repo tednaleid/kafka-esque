@@ -15,8 +15,8 @@ JVM strings are UTF-16, not UTF-8 string that nim uses
 ]#
 proc jvmStringHash*(str: string): int32 =
     let widestring = newWideCString(str) # UTF-8 -> UTF-16
-    var 
-        hashTotal:int32 = 0
+    var
+        hashTotal: int32 = 0
         charAt = widestring.len - 1
         baseToPower = 1
 
@@ -25,7 +25,8 @@ proc jvmStringHash*(str: string): int32 =
         charAt.dec
         # +%, -%, *%, and casting to an int32 will all truncate safely without overflow
         hashTotal = hashTotal +% cast[int32](thisChar *% baseToPower)
-        baseToPower = baseToPower shl 5 -% baseToPower # same as * 31 -> shl 5 is * 32, then take one value away
+        baseToPower = baseToPower shl 5 -%
+                baseToPower # same as * 31 -> shl 5 is * 32, then take one value away
 
     return hashTotal
 
@@ -47,5 +48,5 @@ when isMainModule:
     checkHash("ô", 244)
     checkHash("æ", 230)
     checkHash("“", 8220)
-    checkHash("“Iñtërnâtiônàlizætiøn”", 220967235) 
+    checkHash("“Iñtërnâtiônàlizætiøn”", 220967235)
     checkHash("Ἀριστοτέλης", -444401857)
