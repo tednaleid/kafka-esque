@@ -1,0 +1,41 @@
+# only has a plaintext port, the docker-compose.yml should be used in most
+# situations so that we can also test TLS/SSL enabled kafka installations
+
+version: '3.5'
+services:
+  esque-zookeeper-plaintext:
+    image: wurstmeister/zookeeper:latest
+    container_name: "esque-zookeeper-plaintext"
+    networks:
+      - esque_kafka_plaintext
+    restart: unless-stopped
+
+  esque-kafka-plaintext:
+    image: wurstmeister/kafka:latest
+    container_name: "esque-kafka-plaintext"
+    ports:
+      - "11092:11092"
+    depends_on:
+      - esque-zookeeper-plaintext
+    links:
+        - "esque-zookeeper-plaintext:zookeeper"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ADVERTISED_HOST_NAME: "localhost"
+      KAFKA_ZOOKEEPER_CONNECT: "esque-zookeeper-plaintext:2181"
+      KAFKA_LISTENERS: PLAINTEXT://esque-kafka-plaintext:11092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://esque-kafka-plaintext:11092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_CLEANUP_POLICY: "compact"
+      KAFKA_CREATE_TOPICS: "testtopic:1:1"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      LOG4J_LOGGER_KAFKA_AUTHORIZER_LOGGER: DEBUG, authorizerAppender
+    networks:
+      - esque_kafka_plaintext
+    restart: unless-stopped
+
+networks:
+  esque_kafka_plaintext:

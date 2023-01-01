@@ -1,5 +1,5 @@
 
-import parseopt
+import parseopt, os, osproc
 
 type
   CommandKind* = enum
@@ -47,6 +47,54 @@ type
       of Errored:
         message*: string
       of Completed, StopAndHelp: nil
+  ConcreteArgs* = ref object
+    kind*: ParseResultKind
+    broker*: string
+    topic*: string
+    execute*: seq[string]
+  TopicConfigKind* = enum
+    Plaintext, Secure
+  TopicConfig* = ref object
+    kind*: TopicConfigKind
+    broker*: string
+    plaintextPort*: int
+    securePort*: int
+    topic*: string
+    # todo TLS stuff
+
+proc log*(msg: string): void =
+  stderr.writeLine(msg)
+
+proc resolveBroker(command: EsqueCommand, concreteArgs: ConcreteArgs): ConcreteArgs =
+  # todo make this really get the broker, return an either/optional?
+  return new(ConcreteArgs)
+
+proc resolveTopic(command: EsqueCommand): ConcreteArgs =
+  # todo make this really get the topic, return an either/optional?
+  return new(ConcreteArgs)
+
+proc listTopics(): seq[string] =
+  log "list topics"
+
+iterator topicConfigs(env: string = "", topicFilter: string = ""): string = 
+  # env is optional
+  # this could be an iterator that yields topic config values
+  # topic config is broker, topic, tls certificate info
+  log "list topics"
+
+proc listTopicsCommand(): seq[string] =
+  log "list topics command"
 
 proc runCommand*(command: EsqueCommand) =
-  echo "Running: " & $command
+  case command.kind:
+    of Cat:
+      # want to list first to find the actual topic name and ensure it's a single
+      echo "Running: " & $command
+      # let returnCode = execCmd(command)
+      # log returnCode
+
+    of List:
+      echo "Running: " & $command
+
+    else:
+      echo "Running: " & $command

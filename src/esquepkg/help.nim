@@ -25,10 +25,12 @@ Commands:
   esque tail <env> <topic> [remaining args passed to kcat]
   esque version
 
+Command Specific Help:
+  esque <command> --help
+
 Options:
   -v --verbose  Verbose output, will emit underlying commands being run on stderr
   -h --help     Show this screen.
-  --version     Show version.
 
 Environment Variables:
   ???
@@ -39,9 +41,6 @@ Examples:
 
 # proc getConfigFile() =
 #   params.baseDir / "config.toml"
-
-proc eecho(msg: string): void =
-  stderr.writeLine(msg)
 
 proc helpMessage(commandKind: CommandKind): string =
   return case commandKind:
@@ -133,9 +132,9 @@ Usage:
 
 proc writeHelp*(commandKind: CommandKind, message: string = "") =
   if (message != ""):
-    eecho message & "\n"
+    log message & "\n"
 
-  eecho helpMessage(commandKind)
+  log helpMessage(commandKind)
 
 proc writeVersion() =
   echo("esque v$1 ($2 $3) [$4/$5]" %

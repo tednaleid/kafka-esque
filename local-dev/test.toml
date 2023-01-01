@@ -1,0 +1,14 @@
+# check with https://toolkit.site/format.html
+
+["broker1:9092"]
+alias = "one"
+filter = "myteam-*"
+
+["broker1:9092".topic-one]
+alias = ["bar", "baz"]
+
+["broker1:9092".topic-two]
+alias = "qux"
+
+["broker1:9092".topic-three]
+

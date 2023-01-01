@@ -1,0 +1,49 @@
+version: '3.5'
+services:
+  esque-zookeeper:
+    image: wurstmeister/zookeeper:latest
+    container_name: "esque-zookeeper"
+    ports:
+      - "2181:2181"
+    networks:
+      - esque_kafka
+    restart: unless-stopped
+
+  esque-kafka:
+    image: wurstmeister/kafka:latest
+    container_name: "esque-kafka"
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    depends_on:
+      - esque-zookeeper
+    links:
+        - "esque-zookeeper:zookeeper"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: PLAINTEXT://esque-kafka:9092,PLAINTEXT_HOST://localhost:29092,SSL://esque-kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://esque-kafka:9092,PLAINTEXT_HOST://localhost:29092,SSL://esque-kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SSL:SSL
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      KAFKA_SSL_KEYSTORE_LOCATION: "/var/private/ssl/kafka.server.keystore.jks"
+      KAFKA_SSL_KEYSTORE_PASSWORD: "changeit"
+      KAFKA_SSL_KEY_PASSWORD: "changeit"
+      KAFKA_SSL_TRUSTSTORE_LOCATION: "/var/private/ssl/kafka.server.truststore.jks"
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: "changeit"
+      KAFKA_CREATE_TOPICS: "testtopic:1:1"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      LOG4J_LOGGER_KAFKA_AUTHORIZER_LOGGER: DEBUG, authorizerAppender
+    networks:
+      - esque_kafka
+    restart: unless-stopped
+    volumes:
+      - ./certs:/var/private/ssl
+
+networks:
+  esque_kafka:

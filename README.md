@@ -61,3 +61,59 @@ Install `choosenim` with:
 #### Release TODO
 - homebrew get osx mac working
   - https://github.com/tednaleid/homebrew-ganda/blob/master/Formula/ganda.rb
+
+
+## Run Kafka/Zookeeper in docker with certificates using `docker-compose`
+
+need to add this to /etc/hosts (`sudo vi /etc/hosts`):
+
+    127.0.0.1 esque-kafka
+
+We need the host name and not just 127.0.0.1 because the certificates we 
+generate need to have a resolvable hostname.  
+
+Generate certificates for the kafka container's use with:
+
+    local-dev/bin/generate-certs.ssh
+
+Start docker containers (assuming docker/docker-compose are installed/running):
+
+    docker-compose -f local-dev/docker-compose.yml up -d
+
+look at logs with: 
+
+    docker logs esque-kafka -f
+
+test connectivity to TLS/SSL port 9093 with:
+
+    openssl s_client -debug -connect localhost:9093 -tls1
+
+See if `kcat` can list out the topics on the plaintext port 9092:
+
+    kcat -L -b esque-kafka:9092  
+
+Should emit something like: 
+
+    Metadata for all topics (from broker 1: esque-kafka:9092/1):
+    1 brokers:
+      broker 1 at esque-kafka:9092 (controller)
+    1 topics:
+      topic "testtopic" with 1 partitions:
+        partition 0, leader 1, replicas: 1, isrs: 1
+
+See if `kcat` can list out the topics on the TLS/SSL port 9093:
+
+    kcat -L -b esque-kafka:9093 \
+      -X security.protocol=ssl \
+      -X ssl.certificate.location=local-dev/certs/client.pem \
+      -X ssl.key.location=local-dev/certs/client.pem \
+      -X ssl.ca.location=local-dev/certs/ca.cert 
+
+Should emit something like:
+
+    Metadata for all topics (from broker 1: ssl://esque-kafka:9093/1):
+    1 brokers:
+      broker 1 at esque-kafka:9093 (controller)
+    1 topics:
+      topic "testtopic" with 1 partitions:
+        partition 0, leader 1, replicas: 1, isrs: 1
