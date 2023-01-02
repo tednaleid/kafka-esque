@@ -1,4 +1,5 @@
 import commands, strformat, strutils, system/io
+import utils
 
 const
   esqueVersion* = "0.1.0"
@@ -10,6 +11,7 @@ Usage:
   esque [-v] <command> [-h/--help]
 
 Commands:
+  esque acls <env> <topic>
   esque cat <env> <topic> [remaining args passed to kcat]
   esque compression <env> <topic>
   esque config <env> <topic>
@@ -44,6 +46,12 @@ Examples:
 
 proc helpMessage(commandKind: CommandKind): string =
   return case commandKind:
+    of Acls:
+      """
+Usage: 
+
+  esque acls <env> <topic>
+      """
     of Cat:
       """
 Usage: 

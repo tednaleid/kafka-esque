@@ -1,8 +1,10 @@
 import std/nre except toSeq
-import parseopt, os, osproc, strformat, strutils, sequtils, parseopt
+import parseopt, strformat, strutils, sequtils
+import shell, utils
 
 type
   CommandKind* = enum
+    Acls,
     Cat,
     Compression,
     Config,
@@ -29,7 +31,7 @@ type
       of MessageAt:
         partition*: int
         offset*: int
-      of Compression, Config, Describe, Env, List, Size, Version:
+      of Acls,Compression, Config, Describe, Env, List, Size, Version:
         nil
       of Help:
         message*: string
@@ -47,11 +49,6 @@ type
       of Errored:
         message*: string
       of Completed, StopAndHelp: nil
-  ConcreteArgs* = ref object
-    kind*: ParseResultKind
-    broker*: string
-    topic*: string
-    execute*: seq[string]
   TopicConfigKind* = enum
     Plaintext, Secure
   TopicConfig* = ref object
@@ -65,9 +62,15 @@ type
     name*: string
     broker*: string
     partitions*: int
-
-proc log*(msg: string): void =
-  stderr.writeLine(msg)
+  TopicQueryResultType* = enum
+    None, Single, Multi
+  TopicQueryResult* = ref object
+    case kind*: TopicQueryResultType
+      of None: nil
+      of Single: 
+        topic*: Topic
+      of Multi:
+        topics*: seq[Topic]
 
 proc `$`*(topic: Topic): string =
   result = fmt"{topic.name} on {topic.broker} has {$topic.partitions} partitions"
@@ -78,42 +81,61 @@ iterator topicIterator(kcatOutput: string, broker: string): Topic =
   for topicMatch in kcatOutput.findIter(topicRegex):
     let matchSeq = topicMatch.captures.toSeq
     yield Topic(
-      name: matchSeq[0].get, 
-      broker: broker, 
+      name: matchSeq[0].get,
+      broker: broker,
       partitions: matchSeq[1].get.parseInt)
 
-
-proc getBrokerTopics(broker: string, topicFilter: string): seq[Topic] =
-  # TODO get the appropriate kcat command and connection context, ConcreteArgs method?
+proc getBrokerTopics(
+    self: ShellContext, broker: string, topicFilter: string): seq[Topic] =
   let kcatCommand: string = fmt"kcat -L -b {broker}"
-  let (output, exitCode) = execCmdEx(kcatCommand)
+  # todo, extract this out and make it a little higher level
+  let (output, exitCode) = self.exec(ShellCommand(command: kcatCommand))
 
   if exitCode != 0:
     # TODO throw an exception instead?
+    # should this be part of the shell runCommand stuff?
+    # might want a version that quits and a version that just returns
     log fmt"error running command: {kcatCommand}"
     log output
     quit(QuitFailure)
-    
-  result = toseq(topicIterator(output, broker))
 
-proc runCommand*(command: EsqueCommand) =
+  result = toSeq(topicIterator(output, broker))
+
+proc findSingleTopic(
+    self: ShellContext, broker: string, topicFilter: string): TopicQueryResult =
+  let topics = getBrokerTopics(self, broker, topicFilter)
+  result = case topics.len:
+    of 0: TopicQueryResult(kind: None)
+    of 1: TopicQueryResult(kind: Single, topic: topics[0])
+    else: TopicQueryResult(kind: Multi, topics: topics)
+
+proc catTopic(self: ShellContext, broker: string, topicFilter: string) =
+  # we'll want to do something other than just output here...
+  echo "cat topic"
+
+
+proc runCommand*(self: ShellContext, command: EsqueCommand) =
+  # for commands that want a specific topic, we could resolve that first
+  # or peel off the commands that don't want a specific topic (env, list, help, partition, version)
   case command.kind:
-    of Cat:
-      # want to list first to find the actual topic name and ensure it's a single
-      echo "Running: " & $command
-      # let returnCode = execCmd(command)
-      # log returnCode
-
+    of Env:
+      echo "Running Env " & $command
     of List:
       echo "Running: " & $command
-      for topic in getBrokerTopics(command.env, command.topic):
+      for topic in getBrokerTopics(self, command.env, command.topic):
         echo topic
-
-      
-
+    of Partition:
+      echo "Running Partition " & $command
+    of Version:
+      echo "Running Version" & $command
     else:
-      echo "Running: " & $command
+      let topicQueryResult = findSingleTopic(self, command.env, command.topic)
 
+
+      let kcatCommand: string = fmt"kcat -C -b {command.env}"
+      echo fmt"kcatCommand {kcatCommand}"
 
 when isMainModule:
-  runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092"))
+  let shellContext = buildShellContext()
+  shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092"))
+  shellContext.runCommand(EsqueCommand(kind: Cat, env: "esque-kafka:9092"))
