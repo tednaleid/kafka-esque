@@ -65,7 +65,8 @@ type
 proc log*(msg: string): void =
   stderr.writeLine(msg)
 
-proc resolveBroker(command: EsqueCommand, concreteArgs: ConcreteArgs): ConcreteArgs =
+proc resolveBroker(command: EsqueCommand,
+    concreteArgs: ConcreteArgs): ConcreteArgs =
   # todo make this really get the broker, return an either/optional?
   return new(ConcreteArgs)
 
@@ -76,7 +77,7 @@ proc resolveTopic(command: EsqueCommand): ConcreteArgs =
 proc listTopics(): seq[string] =
   log "list topics"
 
-iterator topicConfigs(env: string = "", topicFilter: string = ""): string = 
+iterator topicConfigs(env: string = "", topicFilter: string = ""): string =
   # env is optional
   # this could be an iterator that yields topic config values
   # topic config is broker, topic, tls certificate info

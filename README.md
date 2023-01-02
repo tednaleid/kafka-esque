@@ -117,3 +117,10 @@ Should emit something like:
     1 topics:
       topic "testtopic" with 1 partitions:
         partition 0, leader 1, replicas: 1, isrs: 1
+
+### clean up docker-compose containers and create sample topics loaded with data
+
+    local-dev/bin/clean-docker.sh && \
+      docker-compose -f local-dev/docker-compose.yml up -d && \
+      local-dev/bin/create-topics.sh && \
+      local-dev/bin/load-sample-data.sh

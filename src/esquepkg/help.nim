@@ -61,74 +61,74 @@ Usage:
 Usage: 
 
   esque config <env> <topic>
-      """      
+      """
     of Describe:
       """
 Usage: 
 
   esque describe <env> <topic>
-      """      
+      """
     of Env:
       """
 Usage: 
 
   esque env
-      """      
+      """
     of First:
       """
 Usage: 
 
   esque first <env> <topic> [remaining args passed to kcat]
-      """      
+      """
     of Help: generalHelp
     of Lag:
       """
 Usage: 
 
   esque lag <env> <group_id>
-      """      
+      """
     of List:
       """
 Usage: 
 
   esque list <env> <topic>
-      """      
+      """
     of MessageAt:
       """
 Usage: 
 
   esque message-at <env> <topic> <partition> <offset> [remaining args passed to kcat]
-      """      
+      """
     of Partition:
       """
 Usage: 
 
   esque partition <env> <topic> <key>
-      """      
+      """
     of Search:
       """
 Usage: 
 
   esque search <env> <topic> <key> [remaining args passed to kcat]
-      """      
+      """
     of Size:
       """
 Usage: 
 
   esque size <env> <topic>
-      """      
+      """
     of Tail:
       """
 Usage: 
 
   esque tail <env> <topic> [remaining args passed to kcat]
-      """      
+      """
     of Version:
       """
 Usage: 
 
   esque version
-      """      
+      """
 
 proc writeHelp*(commandKind: CommandKind, message: string = "") =
   if (message != ""):
