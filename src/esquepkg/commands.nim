@@ -1,5 +1,5 @@
-
-import parseopt, os, osproc
+import std/nre except toSeq
+import parseopt, os, osproc, strformat, strutils, sequtils, parseopt
 
 type
   CommandKind* = enum
@@ -61,30 +61,40 @@ type
     securePort*: int
     topic*: string
     # todo TLS stuff
+  Topic* = ref object
+    name*: string
+    broker*: string
+    partitions*: int
 
 proc log*(msg: string): void =
   stderr.writeLine(msg)
 
-proc resolveBroker(command: EsqueCommand,
-    concreteArgs: ConcreteArgs): ConcreteArgs =
-  # todo make this really get the broker, return an either/optional?
-  return new(ConcreteArgs)
+proc `$`*(topic: Topic): string =
+  result = fmt"{topic.name} on {topic.broker} has {$topic.partitions} partitions"
 
-proc resolveTopic(command: EsqueCommand): ConcreteArgs =
-  # todo make this really get the topic, return an either/optional?
-  return new(ConcreteArgs)
+let topicRegex = re"""topic "(.*)" with (\d+) partitions:"""
 
-proc listTopics(): seq[string] =
-  log "list topics"
+iterator topicIterator(kcatOutput: string, broker: string): Topic =
+  for topicMatch in kcatOutput.findIter(topicRegex):
+    let matchSeq = topicMatch.captures.toSeq
+    yield Topic(
+      name: matchSeq[0].get, 
+      broker: broker, 
+      partitions: matchSeq[1].get.parseInt)
 
-iterator topicConfigs(env: string = "", topicFilter: string = ""): string =
-  # env is optional
-  # this could be an iterator that yields topic config values
-  # topic config is broker, topic, tls certificate info
-  log "list topics"
 
-proc listTopicsCommand(): seq[string] =
-  log "list topics command"
+proc getBrokerTopics(broker: string, topicFilter: string): seq[Topic] =
+  # TODO get the appropriate kcat command and connection context, ConcreteArgs method?
+  let kcatCommand: string = fmt"kcat -L -b {broker}"
+  let (output, exitCode) = execCmdEx(kcatCommand)
+
+  if exitCode != 0:
+    # TODO throw an exception instead?
+    log fmt"error running command: {kcatCommand}"
+    log output
+    quit(QuitFailure)
+    
+  result = toseq(topicIterator(output, broker))
 
 proc runCommand*(command: EsqueCommand) =
   case command.kind:
@@ -96,6 +106,14 @@ proc runCommand*(command: EsqueCommand) =
 
     of List:
       echo "Running: " & $command
+      for topic in getBrokerTopics(command.env, command.topic):
+        echo topic
+
+      
 
     else:
       echo "Running: " & $command
+
+
+when isMainModule:
+  runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092"))

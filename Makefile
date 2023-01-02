@@ -21,6 +21,7 @@ build-releases: build-release-linux-amd64 build-release-macosx-arm64 build-relea
 build-release-linux-amd64:
 	docker run --rm -v `pwd`:/usr/src/app -w /usr/src/app nimlang/nim \
 	    nim c -d:release \
+						--passc:-flto \
 	          --warnings:on \
 		        --outdir:releases/amd64-linux \
 		        --opt:speed \
@@ -41,6 +42,7 @@ build-release-linux-amd64-clang:
 		    --cpu:amd64 \
 		    --forceBuild:on \
 		    -d:release \
+				--passc:-flto \
 		    --opt:speed \
 		    --outdir:releases/linux_amd64 \
 		    --out:$(MAIN_BIN) \
@@ -49,6 +51,7 @@ build-release-linux-amd64-clang:
 .PHONY: build-release-macosx-arm64
 build-release-macosx-arm64:
 	nim c -d:release \
+				--passc:-flto \
 	      --warnings:on \
 		    --cpu:arm64 \
 		    --os:macosx \
@@ -59,6 +62,7 @@ build-release-macosx-arm64:
 .PHONY: build-release-macosx-amd64
 build-release-macosx-amd64:
 	nim c -d:release \
+				--passc:-flto \
 	      --warnings:on \
 		    --cpu:amd64 \
 		    --os:macosx \
