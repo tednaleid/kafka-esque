@@ -2,8 +2,6 @@ import esquepkg/submodule
 
 let parseResult = parseCliParams()
 
-# todo, create the ShellContext that knows where apps are and how they should be run
-
 case parseResult.kind:
   of Completed:
     let shellContext = buildShellContext()

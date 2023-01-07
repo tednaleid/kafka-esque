@@ -1,4 +1,5 @@
 import commands, parseopt, strutils, strformat, os
+import utils
 
 proc `$`*(parseResult: ParseResult): string =
   result = case parseResult.kind:
@@ -111,9 +112,10 @@ proc chompEnvironmentAndTopic(parseResult: ParseResult): ParseResult =
   inProgress:
     parseResult.chompEnvironment().chompTopic()
 
+let commandKindLookup = prefixTable(CommandKind)
+
 proc parseCliParams*(args: seq[string]): ParseResult =
-  var
-    verbose: bool = false
+  var verbose: bool = false
 
   result = ParseResult(kind: InProgress, remaining: initOptParser(args))
 
@@ -121,81 +123,92 @@ proc parseCliParams*(args: seq[string]): ParseResult =
     result.remaining.next()
     case result.remaining.kind
     of cmdArgument:
-      let normalized = result.remaining.key.normalize()
-      result = case normalized
-        of "ca", "cat":
-          result.setCommand(Cat)
-            .chompEnvironmentAndTopic()
-            .chompKCatParams()
-            .completed()
-        of "comp", "compression":
-          result.setCommand(Compression)
-            .chompEnvironmentAndTopic()
-            .completed()
-        of "config":
-          result.setCommand(Config)
-            .chompEnvironmentAndTopic()
-            .completed()
-        of "desc", "describe":
-          result.setCommand(Describe)
-            .chompEnvironmentAndTopic()
-            .completed()
-        of "env", "environment":
-          result.setCommand(Env)
-            .chompOptionalEnvironment()
-            .chompOptionalTopic()
-            .completed()
-        of "first":
-          result.setCommand(First)
-            .chompEnvironmentAndTopic()
-            .chompKCatParams()
-            .completed()
-        of "help":
+      let commandString = result.remaining.key
+      let matchResult = commandKindLookup.findMatch(commandString)
+      result = case matchResult.kind:
+        of None:
           result.setCommand(Help)
-            .stopAndHelp()
-        of "list":
-          result.setCommand(List)
-            .chompOptionalEnvironment()
-            .chompOptionalTopic()
-            .completed()
-        of "lag":
-          result.setCommand(Lag)
-            .chompEnvironmentAndTopic()
-            .chompGroupId()
-            .completed()
-        of "message-at":
-          result.setCommand(MessageAt)
-            .chompEnvironmentAndTopic()
-            .chompPartition()
-            .chompOffset()
-            .chompKCatParams()
-            .completed()
-        of "partition":
-          result.setCommand(Partition)
-            .chompEnvironmentAndTopic()
-            .chompKey()
-            .completed()
-        of "search":
-          result.setCommand(Search)
-            .chompEnvironmentAndTopic()
-            .chompKey()
-            .chompKCatParams()
-            .completed()
-        of "size":
-          result.setCommand(Size)
-            .chompEnvironmentAndTopic()
-            .completed()
-        of "tail":
-          result.setCommand(Tail)
-            .chompEnvironmentAndTopic()
-            .chompKCatParams()
-            .completed()
-        of "version":
-          result.setCommand(Version)
-            .completed()
-        else:
+            .errored(fmt"Unknown command: {commandString}")
+        of Multi:
           result.setCommand(Help)
-            .errored(fmt"Unknown command: {normalized}")
+            .errored(
+              fmt"""Ambiguous command: {commandString} - one of {matchResult.values.join(", ")}""")
+        of Single:
+          case matchResult.value
+            of Acls:
+              result.setCommand(Acls)
+                .chompEnvironmentAndTopic()
+                .completed()
+            of Cat:
+              result.setCommand(Cat)
+                .chompEnvironmentAndTopic()
+                .chompKCatParams()
+                .completed()
+            of Compression:
+              result.setCommand(Compression)
+                .chompEnvironmentAndTopic()
+                .completed()
+            of Config:
+              result.setCommand(Config)
+                .chompEnvironmentAndTopic()
+                .completed()
+            of Describe:
+              result.setCommand(Describe)
+                .chompEnvironmentAndTopic()
+                .completed()
+            of Env:
+              result.setCommand(Env)
+                .chompOptionalEnvironment()
+                .chompOptionalTopic()
+                .completed()
+            of First:
+              result.setCommand(First)
+                .chompEnvironmentAndTopic()
+                .chompKCatParams()
+                .completed()
+            of Help:
+              result.setCommand(Help)
+                .stopAndHelp()
+            of List:
+              result.setCommand(List)
+                .chompOptionalEnvironment()
+                .chompOptionalTopic()
+                .completed()
+            of Lag:
+              result.setCommand(Lag)
+                .chompEnvironmentAndTopic()
+                .chompGroupId()
+                .completed()
+            of MessageAt:
+              result.setCommand(MessageAt)
+                .chompEnvironmentAndTopic()
+                .chompPartition()
+                .chompOffset()
+                .chompKCatParams()
+                .completed()
+            of Partition:
+              result.setCommand(Partition)
+                .chompEnvironmentAndTopic()
+                .chompKey()
+                .completed()
+            of Search:
+              result.setCommand(Search)
+                .chompEnvironmentAndTopic()
+                .chompKey()
+                .chompKCatParams()
+                .completed()
+            of Size:
+              result.setCommand(Size)
+                .chompEnvironmentAndTopic()
+                .completed()
+            of Tail:
+              result.setCommand(Tail)
+                .chompEnvironmentAndTopic()
+                .chompKCatParams()
+                .completed()
+            of Version:
+              result.setCommand(Version)
+                .completed()
 
     of cmdLongOption, cmdShortOption:
       let normalized = result.remaining.key.normalize()
@@ -236,3 +249,6 @@ when isMainModule:
   showResultOf(@["--help"])
   showResultOf(@["cat", "help"])
   showResultOf(@["cat", "--help"])
+
+  echo "Ambiguous"
+  showResultOf(@["c", "dev", "item-topic"])

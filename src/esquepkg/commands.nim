@@ -26,13 +26,12 @@ type
     verbose*: bool
     remainingArgs*: seq[string]
     case kind*: CommandKind
-      of Cat, First, Tail:
+      of Acls, Cat, Compression, Config, Describe, Env, First, List, Size,
+          Tail, Version:
         nil
       of MessageAt:
         partition*: int
         offset*: int
-      of Acls,Compression, Config, Describe, Env, List, Size, Version:
-        nil
       of Help:
         message*: string
       of Lag:
@@ -62,15 +61,6 @@ type
     name*: string
     broker*: string
     partitions*: int
-  TopicQueryResultType* = enum
-    None, Single, Multi
-  TopicQueryResult* = ref object
-    case kind*: TopicQueryResultType
-      of None: nil
-      of Single: 
-        topic*: Topic
-      of Multi:
-        topics*: seq[Topic]
 
 proc `$`*(topic: Topic): string =
   result = fmt"{topic.name} on {topic.broker} has {$topic.partitions} partitions"
@@ -101,17 +91,17 @@ proc getBrokerTopics(
 
   result = toSeq(topicIterator(output, broker))
 
-proc findSingleTopic(
-    self: ShellContext, broker: string, topicFilter: string): TopicQueryResult =
-  let topics = getBrokerTopics(self, broker, topicFilter)
-  result = case topics.len:
-    of 0: TopicQueryResult(kind: None)
-    of 1: TopicQueryResult(kind: Single, topic: topics[0])
-    else: TopicQueryResult(kind: Multi, topics: topics)
+# proc findSingleTopic(
+#     self: ShellContext, broker: string, topicFilter: string): TopicQueryResult =
+#   let topics = getBrokerTopics(self, broker, topicFilter)
+#   result = case topics.len:
+#     of 0: TopicQueryResult(kind: None)
+#     of 1: TopicQueryResult(kind: Single, topic: topics[0])
+#     else: TopicQueryResult(kind: Multi, topics: topics)
 
-proc catTopic(self: ShellContext, broker: string, topicFilter: string) =
-  # we'll want to do something other than just output here...
-  echo "cat topic"
+# proc catTopic(self: ShellContext, broker: string, topicFilter: string) =
+#   # we'll want to do something other than just output here...
+#   echo "cat topic"
 
 
 proc runCommand*(self: ShellContext, command: EsqueCommand) =
@@ -129,8 +119,7 @@ proc runCommand*(self: ShellContext, command: EsqueCommand) =
     of Version:
       echo "Running Version" & $command
     else:
-      let topicQueryResult = findSingleTopic(self, command.env, command.topic)
-
+      # let topicQueryResult = findSingleTopic(self, command.env, command.topic)
 
       let kcatCommand: string = fmt"kcat -C -b {command.env}"
       echo fmt"kcatCommand {kcatCommand}"

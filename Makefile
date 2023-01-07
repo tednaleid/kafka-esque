@@ -6,16 +6,19 @@ MAIN_NIM_PATH := $(SRC_DIR)/$(MAIN_BIN).nim
 build:
 	nim compile -g --debugger:native -o:bin/$(MAIN_BIN) $(MAIN_NIM_PATH)
 
-.PHONE: clean
+.PHONY: test
+test: build
+	nim c -r --outdir:build tests/*.nim
+
+.PHONY: clean
 clean:
 	rm -rf releases
+	rm -rf build
 	rm -f bin/$(MAIN_BIN)
-
 
 .PHONY: build-releases
 build-releases: build-release-linux-amd64 build-release-macosx-arm64 build-release-macosx-amd64
 	find releases -ls
-
 
 .PHONY: build-release-linux-amd64
 build-release-linux-amd64:

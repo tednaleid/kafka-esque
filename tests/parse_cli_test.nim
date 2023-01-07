@@ -1,5 +1,5 @@
 import unittest
-import esquepkg/parse_cli, esquepkg/commands
+import esquepkg/parse_cli, esquepkg/commands, esquepkg/utils
 
 func `==`(command1, command2: EsqueCommand): bool =
   if command1.kind != command2.kind or
@@ -227,3 +227,19 @@ suite "command argument parsing":
   test "unknown command shows help":
     parseCliParams(@["foobar"]) ===
       errored(EsqueCommand(kind: Help), "Unknown command: foobar")
+
+  test "a command can be found if it has a unique prefix":
+    parseCliParams(@["desc", "dev", "item-topic2"]) ===
+      completed(EsqueCommand(
+        kind: Describe, env: "dev", topic: "item-topic2"))
+
+  test "a non-unique prefix will echo possible commands":
+    parseCliParams(@["c"]) ===
+      errored(EsqueCommand(kind: Help), "Ambiguous command: c - one of Cat, Compression, Config")
+
+  test "a command with a kebob-case hyphen in it can be found before the hyphen":
+    parseCliParams(@["message", "dev", "item-topic2", "0", "1000"]) ===
+      completed(EsqueCommand(
+          kind: MessageAt, env: "dev", topic: "item-topic2", partition: 0,
+          offset: 1_000))
+      
