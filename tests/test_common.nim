@@ -1,0 +1,1 @@
+template `===`*(value1, value2: untyped) = check value1 == value2

@@ -1,4 +1,4 @@
-import unittest
+import unittest, test_common
 import esquepkg/parse_cli, esquepkg/commands, esquepkg/utils
 
 func `==`(command1, command2: EsqueCommand): bool =
@@ -242,4 +242,3 @@ suite "command argument parsing":
       completed(EsqueCommand(
           kind: MessageAt, env: "dev", topic: "item-topic2", partition: 0,
           offset: 1_000))
-      

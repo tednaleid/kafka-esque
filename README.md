@@ -14,12 +14,7 @@ Install `choosenim` with:
 
 # TODO
 
-- get docker based commands working
-- get kcat commands working
-
 - work with kafka/librdkafka
-- copy over docker-compose/tls cert stuff from other kafka-esque
-
 
 #### Implement Features TODO
 - Cat

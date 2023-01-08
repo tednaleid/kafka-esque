@@ -4,9 +4,10 @@ let parseResult = parseCliParams()
 
 case parseResult.kind:
   of Completed:
-    let shellContext = buildShellContext()
-    shellContext.runCommand(parseResult.command)
-    quit(QuitSuccess)
+    let command = parseResult.command
+    let shellContext = buildShellContext(command.verbose)
+    let exitCode = shellContext.runCommand(command)
+    quit(exitCode)
   of StopAndHelp:
     writeHelp(parseResult.command.kind)
     quit(QuitSuccess)

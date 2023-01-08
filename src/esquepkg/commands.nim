@@ -4,25 +4,10 @@ import shell, utils
 
 type
   CommandKind* = enum
-    Acls,
-    Cat,
-    Compression,
-    Config,
-    Describe,
-    Env,
-    First,
-    Help,
-    Lag,
-    List,
-    MessageAt,
-    Partition,
-    Search,
-    Size,
-    Tail,
-    Version
+    Acls, Cat, Compression, Config, Describe, Env, First, Help, Lag, List,
+    MessageAt, Partition, Search, Size, Tail, Version
   EsqueCommand* = object
-    env*: string
-    topic*: string
+    env*, topic*: string
     verbose*: bool
     remainingArgs*: seq[string]
     case kind*: CommandKind
@@ -30,8 +15,7 @@ type
           Tail, Version:
         nil
       of MessageAt:
-        partition*: int
-        offset*: int
+        partition*, offset*: int
       of Help:
         message*: string
       of Lag:
@@ -51,15 +35,12 @@ type
   TopicConfigKind* = enum
     Plaintext, Secure
   TopicConfig* = ref object
+    broker*, topic*: string
     kind*: TopicConfigKind
-    broker*: string
-    plaintextPort*: int
-    securePort*: int
-    topic*: string
+    plaintextPort*, securePort*: int
     # todo TLS stuff
   Topic* = ref object
-    name*: string
-    broker*: string
+    name*, broker*: string
     partitions*: int
 
 proc `$`*(topic: Topic): string =
@@ -79,7 +60,7 @@ proc getBrokerTopics(
     self: ShellContext, broker: string, topicFilter: string): seq[Topic] =
 
   let kcatCommand = self.kcat & @["-L", "-b", broker]
-  let (output, exitCode) = self.exec(kcatCommand)
+  let (output, exitCode) = self.capture(kcatCommand)
 
   if exitCode != 0:
     # TODO throw an exception instead?
@@ -99,46 +80,37 @@ proc findSingleTopic(
     of 1: MatchResult(kind: Single, topic: topics[0])
     else: MatchResult(kind: Multi, topics: topics)
 
-proc catTopic(self: ShellContext, command: EsqueCommand) =
+proc catTopic(self: ShellContext, command: EsqueCommand): int =
   # we'll want to do something other than just output here...
-  echo "cat topic"
-  let cmd = self.kcat & @["-C", "-e", "-q", "-b", command.env, "-t", command.topic] & command.remainingArgs
-  echo $cmd
-  echo self.exec(cmd).output
+  let kcatCat = self.kcat & @["-C", "-e", "-q", "-b", command.env, "-t",
+      command.topic] & command.remainingArgs
+  result = self.run(kcatCat)
 
-proc firstTopic(self: ShellContext, command: EsqueCommand) =
-  let cmd = self.kcat & @["-C", "-e", "-q", "-b", command.env, "-t", command.topic, "-c", "1"] & command.remainingArgs
-  echo $cmd
-  echo self.exec(cmd).output
+proc firstTopic(self: ShellContext, command: EsqueCommand): int =
+  let kcatFirst = self.kcat & @["-C", "-e", "-q", "-b", command.env, "-t",
+      command.topic, "-c", "1"] & command.remainingArgs
+  result = self.run(kcatFirst)
 
-proc runCommand*(self: ShellContext, command: EsqueCommand) =
+proc runCommand*(self: ShellContext, command: EsqueCommand): int =
   # for commands that want a specific topic, we could resolve that first
   # or peel off the commands that don't want a specific topic (env, list, help, partition, version)
-  case command.kind:
-    of Cat:
-      self.catTopic(command)
-    of First:
-      self.firstTopic(command)
-    of Env:
-      echo "Running Env " & $command
+  result = case command.kind:
+    of Cat: self.catTopic(command)
+    of First: self.firstTopic(command)
     of List:
-      echo "Running: " & $command
-      for topic in getBrokerTopics(self, command.env, command.topic):
-        echo topic
-    of Partition:
-      echo "Running Partition " & $command
-    of Version:
-      echo "Running Version" & $command
+      for topic in getBrokerTopics(self, command.env, command.topic): echo topic
+      0
     else:
       echo fmt"TODO {command}"
+      0
 
 
 when isMainModule:
-  let shellContext = buildShellContext()
-  shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092"))
-  shellContext.runCommand(EsqueCommand(kind: Cat, env: "esque-kafka:9092", 
+  var shellContext = buildShellContext(true)
+  discard shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092")) 
+  discard shellContext.runCommand(EsqueCommand(kind: Cat, env: "esque-kafka:9092",
     topic: "ten-partitions-lz4",
     remainingArgs: @["-c", "1", "-p", "0"]))
-  shellContext.runCommand(EsqueCommand(kind: First, env: "esque-kafka:9092", 
-    topic: "ten-partitions-lz4",
-    remainingArgs: @["-p", "0", "-f", "'%k %p %o\n'"]))
+  discard shellContext.runCommand(EsqueCommand(kind: First, env: "esque-kafka:9092",
+    topic: "ten-partitions-none",
+    remainingArgs: @["-p", "0", "-f", "%k %p %o\n"]))

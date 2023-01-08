@@ -1,4 +1,5 @@
 SRC_DIR := src
+TESTS_DIR := tests
 MAIN_BIN := esque
 MAIN_NIM_PATH := $(SRC_DIR)/$(MAIN_BIN).nim
 
@@ -6,9 +7,9 @@ MAIN_NIM_PATH := $(SRC_DIR)/$(MAIN_BIN).nim
 build:
 	nim compile -g --debugger:native -o:bin/$(MAIN_BIN) $(MAIN_NIM_PATH)
 
-.PHONY: test
-test: build
-	nim c -r --outdir:build tests/*.nim
+.PHONY: tests
+tests: 
+	nim compile -r -g --debugger:native -o:bin/tester tests/tester
 
 .PHONY: clean
 clean:
@@ -75,4 +76,4 @@ build-release-macosx-amd64:
 
 .PHONY: pretty
 pretty:
-	nimpretty $(SRC_DIR)/**/*.nim
+	nimpretty $(SRC_DIR)/**/*.nim $(TESTS_DIR)/*.nim
