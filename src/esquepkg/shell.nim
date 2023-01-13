@@ -7,9 +7,9 @@ type
       tuple[output: string, exitCode: int]
     runShell*: proc(self: ShellContext, shellCommand: ShellCommand): int
     kcat*: ShellCommand
-    # kafkaConsumerGroups*: ShellCommand
-    # kafkaTopics*: ShellCommand
-    # kafkaAcls*: ShellCommand
+    kafkaConsumerGroups*: ShellCommand
+    kafkaTopics*: ShellCommand
+    kafkaAcls*: ShellCommand
   ShellCommand* = ref object
     command*: string
     args*: seq[string]
@@ -48,12 +48,15 @@ template capture*(self: ShellContext, shellCommand: ShellCommand):
     tuple[output: string, exitCode: int] =
   self.captureShell(self, shellCommand)
 
+
+const kcatContainer = "edenhill/kcat:1.7.1"
+
 proc kcatCommand(verifyExists: proc(exePath: string): bool): ShellCommand =
   result = if verifyExists("kcat"):
     ShellCommand(command: "kcat", args: @[])
   elif verifyExists("docker"):
     ShellCommand(command: "docker",
-      args: @["run", "--network", "host", "edenhill/kcat:1.7.1", "kcat"])
+      args: @["run", "--network", "host", kcatContainer, "kcat"])
   else:
     when defined(macosx):
       log "'kcat' is required. e.g. brew install kcat"
@@ -61,19 +64,47 @@ proc kcatCommand(verifyExists: proc(exePath: string): bool): ShellCommand =
       log "install kcat or docker"
     raiseAssert "Unable to find 'kcat' executable"
 
-proc buildShellContext*(
-  verbose: bool = false,
-  captureShell: proc (self: ShellContext, shellCommand: ShellCommand): 
-    tuple[output: string, exitCode: int] = captureShell,
-  runShell: proc(self: ShellContext, shellCommand: ShellCommand): 
-    int = runShell,
-  verifyExists = verifyExists): ShellContext =
-  # todo verify that we've got the right executables here and stick them in the context
-  # later we can potentially build things up from config
 
-  # TODO get other executables in the shell context
-  result = ShellContext(verbose: verbose, captureShell: captureShell,
-      runShell: runShell, kcat: verifyExists.kcatCommand)
+const kafkaContainer = "wurstmeister/kafka:2.13-2.8.1"
+
+proc kafkaShellCommand(verifyExists: proc(exePath: string): bool,
+                       baseCommand: string): ShellCommand =
+  result = if verifyExists(baseCommand & ".sh"):
+    ShellCommand(command: baseCommand & ".sh", args: @[])
+  elif verifyExists(baseCommand):
+    ShellCommand(command: baseCommand, args: @[])
+  elif verifyExists("docker"):
+    ShellCommand(command: "docker",
+      args: @["run", 
+              "--network", 
+              "host", 
+              kafkaContainer, 
+              baseCommand & ".sh"])
+  else:
+    when defined(macosx):
+      log "missing: " & baseCommand & ".sh -> brew install kafka"
+    else: # assuming linux for now
+      log "install kafka or docker"
+    raiseAssert "Unable to find '" & baseCommand & "' executable"
+  
+
+proc buildShellContext*(
+    verbose: bool = false,
+    captureShell: proc (self: ShellContext, shellCommand: ShellCommand): 
+      tuple[output: string, exitCode: int] = captureShell,
+    runShell: proc(self: ShellContext, shellCommand: ShellCommand): 
+      int = runShell,
+    verifyExists = verifyExists): ShellContext =
+
+  result = ShellContext(
+    verbose: verbose, 
+    captureShell: captureShell,
+    runShell: runShell, 
+    kcat: verifyExists.kcatCommand,
+    kafkaConsumerGroups: 
+      verifyExists.kafkaShellCommand("kafka-consumer-groups"),
+    kafkaTopics: verifyExists.kafkaShellCommand("kafka-topics"),
+    kafkaAcls: verifyExists.kafkaShellCommand("kafka-acls"))
 
 when isMainModule:
   let shellCommand = ShellCommand(command: "ls", args: @["-la"])

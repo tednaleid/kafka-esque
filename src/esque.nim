@@ -7,7 +7,10 @@ case parseResult.kind:
     let command = parseResult.command
     let shellContext = buildShellContext(command.verbose)
     let exitCode = shellContext.runCommand(command)
-    quit(exitCode)
+    if exitCode == 0:
+      quit(QuitSuccess)
+    else:
+      quit(QuitFailure)
   of StopAndHelp:
     writeHelp(parseResult.command.kind)
     quit(QuitSuccess)

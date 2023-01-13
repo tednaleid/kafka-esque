@@ -80,8 +80,17 @@ proc findSingleTopic(
     of 1: MatchResult(kind: Single, topic: topics[0])
     else: MatchResult(kind: Multi, topics: topics)
 
+proc topicAcls(self: ShellContext, command: EsqueCommand): int =
+  let kafkaAcls = self.kafkaAcls & 
+                  @["--bootstrap-server", 
+                    command.env, 
+                    "--topic", 
+                    command.topic,
+                    "--list"
+                  ] & command.remainingArgs
+  result = self.run(kafkaAcls)
+
 proc catTopic(self: ShellContext, command: EsqueCommand): int =
-  # we'll want to do something other than just output here...
   let kcatCat = self.kcat & @["-C", "-e", "-q", "-b", command.env, "-t",
       command.topic] & command.remainingArgs
   result = self.run(kcatCat)
@@ -91,26 +100,48 @@ proc firstTopic(self: ShellContext, command: EsqueCommand): int =
       command.topic, "-c", "1"] & command.remainingArgs
   result = self.run(kcatFirst)
 
+proc tailTopic(self: ShellContext, command: EsqueCommand): int =
+  let kcatFirst = self.kcat & @["-C", "-q", "-b", command.env, "-t",
+      command.topic, "-o", "end"] & command.remainingArgs
+  result = self.run(kcatFirst)
+
 proc runCommand*(self: ShellContext, command: EsqueCommand): int =
   # for commands that want a specific topic, we could resolve that first
   # or peel off the commands that don't want a specific topic (env, list, help, partition, version)
   result = case command.kind:
+    of Acls: self.topicAcls(command)
     of Cat: self.catTopic(command)
+    of Compression: 0
+    of Config: 0
+    of Describe: 0
+    of Env: 0
     of First: self.firstTopic(command)
+    of Help: 0
+    of Lag: 0
     of List:
+      # TODO switch this so it emits alternate format
       for topic in getBrokerTopics(self, command.env, command.topic): echo topic
       0
-    else:
-      echo fmt"TODO {command}"
-      0
+    of MessageAt: 0
+    of Partition: 0
+    of Search: 0
+    of Size: 0
+    of Tail: self.tailTopic(command)
+    of Version: 0
 
 
 when isMainModule:
   var shellContext = buildShellContext(true)
-  discard shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092")) 
-  discard shellContext.runCommand(EsqueCommand(kind: Cat, env: "esque-kafka:9092",
-    topic: "ten-partitions-lz4",
-    remainingArgs: @["-c", "1", "-p", "0"]))
+  discard shellContext.runCommand(
+    EsqueCommand(kind: Acls, 
+                 env: "esque-kafka:9092", 
+                 topic: "ten-partitions-lz4")) 
+  discard shellContext.runCommand(
+    EsqueCommand(kind: Cat, 
+                 env: "esque-kafka:9092",
+                 topic: "ten-partitions-lz4",
+                 remainingArgs: @["-c", "1", "-p", "0"]))
   discard shellContext.runCommand(EsqueCommand(kind: First, env: "esque-kafka:9092",
     topic: "ten-partitions-none",
     remainingArgs: @["-p", "0", "-f", "%k %p %o\n"]))
+  discard shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092")) 

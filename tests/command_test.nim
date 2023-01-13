@@ -1,52 +1,52 @@
 import unittest, sugar, test_common
 import esquepkg/shell, esquepkg/commands
 
-
 func `==`(value1, value2: ShellCommand): bool =
   value1.command == value2.command and value1.args == value2.args
 
 let captureShellStub =
   (s: ShellContext, sc: ShellCommand) => (output: "stubbed!", exitCode: 0)
 
-let runShellStub = (s: ShellContext, sc: ShellCommand) => 0
-
-template inlineProc(obs: untyped): untyped =
-  (proc(value: string): int =
-    obs.add(value)
-    result = 0)
-
-# proc captureShellMock(): proc (self: ShellContext, shellCommand: ShellCommand): tuple[output: string, exitCode: int] =
-#   var observed: seq[ShellCommand] = @[]
-#   return proc (self: ShellContext, shellCommand: ShellCommand): tuple[output: string, exitCode: int] =
-#     observed.add(shellCommand)
-#     result = (output: "", exitCode: 0)
-
-template captureShellMock(op: string, ec: int, observed: untyped): untyped =
+template captureShellMock(op: string, ec: int, observed: seq[ShellCommand]): untyped =
   (proc (self: ShellContext, shellCommand: ShellCommand): tuple[output: string, exitCode: int] =
     observed.add(shellCommand)
     result = (output: op, exitCode: ec))
 
+let runShellStub = (s: ShellContext, sc: ShellCommand) => 0
 
+template runShellMock(exitCode: int, observed: var seq[ShellCommand]): untyped =
+  (proc (self: ShellContext, shellCommand: ShellCommand): int =
+    observed.add(shellCommand)
+    result = exitCode)
+
+proc shouldRunShell(esqueCommand: EsqueCommand, expectedShell: string) =
+  var observed: seq[ShellCommand] = @[]
+  let shellContext = buildShellContext(
+      true, captureShellStub, runShellMock(0, observed))
+
+  shellContext.runCommand(esqueCommand) === 0
+
+  $observed[0] === expectedShell
 
 suite "command tests":
+
+  test "acl command":
+    EsqueCommand(kind: Acls, env: "prod", topic: "item-topic")
+      .shouldRunShell "kafka-acls.sh --bootstrap-server prod:9092 --topic item-topic --list"
   test "cat command":
-    var observed: seq[ShellCommand] = @[]
-    var csm = captureShellMock("foobar", 0, observed)
+    EsqueCommand(kind: Cat, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
+      .shouldRunShell "kcat -C -e -q -b prod -t item-topic -p 0"
 
-    var shellContext = buildShellContext(true, csm)
-    var shellCommand = ShellCommand(command: "foo", args: @["bar"])
-    echo csm(shellContext, shellCommand)
-    observed === @[shellCommand]
+  test "first command":
+    EsqueCommand(kind: First, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
+      .shouldRunShell "kcat -C -e -q -b prod -t item-topic -c 1 -p 0"
 
-    var csm2 = proc (self: ShellContext, shellCommand: ShellCommand): tuple[output: string, exitCode: int] =
-      observed.add(shellCommand) 
-      result = (output: "", exitCode: 0)
+  test "tail command":
+    EsqueCommand(kind: Tail, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
+      .shouldRunShell "kcat -C -q -b prod -t item-topic -o end -p 0"
 
-    var sc2: ShellContext = buildShellContext(true, csm2)
-    # var shellContext = buildShellContext(true, csm)
-    # var shellContext = buildShellContext()
-    # discard shellContext.runCommand(EsqueCommand(kind: Cat, env: "esque-kafka:9092")) 
 
+suite "test mocking of functions in the shell context":
   test "we can stub out the capture so that it returns what we want it to":
     let wontBeActuallyRun = ShellCommand(command: "nope", args: @["hello world"])
 
