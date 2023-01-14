@@ -32,7 +32,8 @@ suite "command tests":
 
   test "acl command":
     EsqueCommand(kind: Acls, env: "prod", topic: "item-topic")
-      .shouldRunShell "kafka-acls.sh --bootstrap-server prod:9092 --topic item-topic --list"
+      .shouldRunShell "docker run --network host wurstmeister/kafka:2.13-2.8.1 kafka-acls.sh --bootstrap-server prod --topic item-topic --list"
+
   test "cat command":
     EsqueCommand(kind: Cat, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
       .shouldRunShell "kcat -C -e -q -b prod -t item-topic -p 0"

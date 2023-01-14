@@ -47,5 +47,3 @@ suite "shell commands":
 
     buildShellContext(true, captureShellStub, failedRunShellStub)
       .run(wontBeActuallyRun) === 1
-
-

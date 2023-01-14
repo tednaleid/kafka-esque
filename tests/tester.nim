@@ -1,1 +1,1 @@
-import command_test, parse_cli_test, shell_test
+import shell_test, command_test, parse_cli_test
