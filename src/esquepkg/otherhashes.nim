@@ -1,4 +1,5 @@
-import strformat, strutils, system/widestrs
+import strformat, strutils
+import std/widestrs
 
 #[
 The JVM String.hashCode [algorithm](https://docs.oracle.com/javase/6/docs/api/java/lang/String.html#hashCode())

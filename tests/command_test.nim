@@ -1,4 +1,4 @@
-import unittest, sugar, test_common
+import unittest, sugar, sequtils, test_common
 import esquepkg/shell, esquepkg/commands
 
 func `==`(value1, value2: ShellCommand): bool =
@@ -7,10 +7,19 @@ func `==`(value1, value2: ShellCommand): bool =
 let captureShellStub =
   (s: ShellContext, sc: ShellCommand) => (output: "stubbed!", exitCode: 0)
 
-template captureShellMock(op: string, ec: int, observed: seq[ShellCommand]): untyped =
+template captureShellMock(emitStdout: string, code: int, observed: seq[ShellCommand]): untyped =
   (proc (self: ShellContext, shellCommand: ShellCommand): tuple[output: string, exitCode: int] =
     observed.add(shellCommand)
-    result = (output: op, exitCode: ec))
+    result = (output: emitStdout, exitCode: code))
+
+proc shouldCaptureShell(esqueCommand: EsqueCommand, 
+                        expectedShell: string,
+                        emitStdout: string) =
+  var observed: seq[ShellCommand] = @[]
+  let shellContext = 
+    buildShellContext(true, captureShellMock(emitStdout, 0, observed))
+  shellContext.runCommand(esqueCommand) === 0
+  $observed[0] === expectedShell
 
 let runShellStub = (s: ShellContext, sc: ShellCommand) => 0
 
@@ -23,13 +32,10 @@ proc shouldRunShell(esqueCommand: EsqueCommand, expectedShell: string) =
   var observed: seq[ShellCommand] = @[]
   let shellContext = buildShellContext(
       true, captureShellStub, runShellMock(0, observed))
-
   shellContext.runCommand(esqueCommand) === 0
-
   $observed[0] === expectedShell
 
 suite "command tests":
-
   test "acl command":
     EsqueCommand(kind: Acls, env: "prod", topic: "item-topic")
       .shouldRunShell "docker run --network host wurstmeister/kafka:2.13-2.8.1 kafka-acls.sh --bootstrap-server prod --topic item-topic --list"
@@ -38,6 +44,27 @@ suite "command tests":
     EsqueCommand(kind: Cat, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
       .shouldRunShell "kcat -C -e -q -b prod -t item-topic -p 0"
 
+  test "config command":
+    let willEmit = """
+Topic: item-topic PartitionCount: 3	ReplicationFactor: 3	Configs: message.downconversion.enable=true,min.insync.replicas=2,cleanup.policy=compact,delete,segment.bytes=1073741824,retention.ms=1814400000,flush.messages=10000,message.format.version=2.7-IV2,max.message.bytes=1000012,min.compaction.lag.ms=0,min.cleanable.dirty.ratio=0.5,unclean.leader.election.enable=false,retention.bytes=-1,delete.retention.ms=86400000
+	Topic: item-topic Partition: 0	Leader: 27	Replicas: 27,56,57	Isr: 57,27,56
+	Topic: item-topic Partition: 1	Leader: 28	Replicas: 28,57,58	Isr: 58,57,28
+	Topic: item-topic Partition: 2	Leader: 29	Replicas: 29,58,59	Isr: 29,58,59  
+  """
+    EsqueCommand(kind: Config, env: "prod", topic: "item-topic")
+      .shouldCaptureShell(
+        "docker run --network host wurstmeister/kafka:2.13-2.8.1 kafka-topics.sh --bootstrap-server prod --topic item-topic --describe", 
+        willEmit)
+
+  test "compression command":
+    let willEmit = """
+%7|1673909882.526|FETCH|rdkafka#consumer-1| [thrd:esque-kafka:9092/bootstrap]: esque-kafka:9092/1: Topic ten-partitions-lz4 [9] in state active at offset 99999 (0/100000 msgs, 0/65536 kb queued, opv 2) is fetchable
+%7|1673909882.527|CONSUME|rdkafka#consumer-1| [thrd:esque-kafka:9092/bootstrap]: esque-kafka:9092/1: Enqueue 1 message(s) (1374 bytes, 1 ops) on ten-partitions-lz4 [0] fetch queue (qlen 0, v2, last_offset 99999, 0 ctrl msgs, 0 aborted msgsets, lz4)
+%7|1673909882.527|FETCH|rdkafka#consumer-1| [thrd:esque-kafka:9092/bootstrap]: esque-kafka:9092/1: Fetch topic ten-partitions-lz4 [0] at offset 100000 (v2)
+    """
+    EsqueCommand(kind: Compression, env: "prod", topic: "item-topic")
+      .shouldCaptureShell "kcat -C -e -q -b prod -t item-topic -c 1 -d fetch", willEmit
+
   test "first command":
     EsqueCommand(kind: First, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
       .shouldRunShell "kcat -C -e -q -b prod -t item-topic -c 1 -p 0"
@@ -45,6 +72,33 @@ suite "command tests":
   test "tail command":
     EsqueCommand(kind: Tail, env: "prod", topic: "item-topic", remainingArgs: @["-p", "0"])
       .shouldRunShell "kcat -C -q -b prod -t item-topic -o end -p 0"
+
+  test "version command":
+    buildShellContext().runCommand(EsqueCommand(kind: Version)) === 0
+
+  test "extract configs from kafka-topic output":
+    let describeTopicOutput = """
+Topic: item-topic PartitionCount: 3	ReplicationFactor: 3	Configs: message.downconversion.enable=true,min.insync.replicas=2,cleanup.policy=compact,delete,segment.bytes=1073741824,retention.ms=1814400000,flush.messages=10000,message.format.version=2.7-IV2,max.message.bytes=1000012,min.compaction.lag.ms=0,min.cleanable.dirty.ratio=0.5,unclean.leader.election.enable=false,retention.bytes=-1,delete.retention.ms=86400000
+	Topic: item-topic Partition: 0	Leader: 27	Replicas: 27,56,57	Isr: 57,27,56
+	Topic: item-topic Partition: 1	Leader: 28	Replicas: 28,57,58	Isr: 58,57,28
+	Topic: item-topic Partition: 2	Leader: 29	Replicas: 29,58,59	Isr: 29,58,59  
+    """
+
+    let myseq = describeTopicOutput.parseConfig.toSeq 
+    myseq === @[
+      (key: "message.downconversion.enable", value: "true"),
+      (key: "min.insync.replicas", value: "2"),
+      (key: "cleanup.policy", value: "compact,delete"),
+      (key: "segment.bytes", value: "1073741824"),
+      (key: "retention.ms", value: "1814400000"),
+      (key: "flush.messages", value: "10000"),
+      (key: "message.format.version", value: "2.7-IV2"),
+      (key: "max.message.bytes", value: "1000012"),
+      (key: "min.compaction.lag.ms", value: "0"),
+      (key: "min.cleanable.dirty.ratio", value: "0.5"),
+      (key: "unclean.leader.election.enable", value: "false"),
+      (key: "retention.bytes", value: "-1"),
+      (key: "delete.retention.ms", value: "86400000")]
 
 
 suite "test mocking of functions in the shell context":

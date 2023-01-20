@@ -14,15 +14,14 @@ Install `choosenim` with:
 
 # TODO
 
-- work with kafka/librdkafka
 
-#### Implement Features TODO
-- Cat
-- Compression
+- change to allow env and broker
+- load startup context with overloaded executable locations
+
+## commands still to implement
 - Config
 - Describe
 - Env
-- First
 - X Help
   - X implement command specific help
 - Lag
@@ -35,8 +34,11 @@ Install `choosenim` with:
     - murmur3_32
 - Search
 - Size
-- Tail
-- Version
+
+## longer term
+- work with kafka/librdkafka
+
+
 
 #### Config TODO
 

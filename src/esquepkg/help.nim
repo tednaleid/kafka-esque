@@ -1,4 +1,4 @@
-import commands, strformat, strutils, system/io
+import commands, strutils
 import utils
 
 const
@@ -51,6 +51,11 @@ proc helpMessage(commandKind: CommandKind): string =
 Usage: 
 
   esque acls <env> <topic>
+
+
+  Known issue: Java heap space error will be thrown if acls command is used
+  against a TLS/SSL port: 
+    https://cwiki.apache.org/confluence/display/KAFKA/KIP-498
       """
     of Cat:
       """
