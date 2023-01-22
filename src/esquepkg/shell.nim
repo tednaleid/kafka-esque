@@ -10,6 +10,7 @@ type
     kafkaConsumerGroups*: ShellCommand
     kafkaTopics*: ShellCommand
     kafkaAcls*: ShellCommand
+    kafkaLogDirs*: ShellCommand
   ShellCommand* = ref object
     command*: string
     args*: seq[string]
@@ -104,7 +105,8 @@ proc buildShellContext*(
     kafkaConsumerGroups: 
       verifyExists.kafkaShellCommand("kafka-consumer-groups"),
     kafkaTopics: verifyExists.kafkaShellCommand("kafka-topics"),
-    kafkaAcls: verifyExists.kafkaShellCommand("kafka-acls"))
+    kafkaAcls: verifyExists.kafkaShellCommand("kafka-acls"),
+    kafkaLogDirs: verifyExists.kafkaShellCommand("kafka-log-dirs"))
 
 when isMainModule:
   let shellCommand = ShellCommand(command: "ls", args: @["-la"])

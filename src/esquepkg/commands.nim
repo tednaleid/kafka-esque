@@ -1,5 +1,5 @@
 import std/nre except toSeq
-import parseopt, strformat, strutils, sequtils
+import parseopt, strformat, strutils, sequtils, json
 import shell, utils
 
 type
@@ -148,6 +148,63 @@ proc firstTopic(self: ShellContext, command: EsqueCommand): int =
       command.topic, "-c", "1"] & command.remainingArgs
   result = self.run(shellCommand)
 
+type 
+  KafkaPartition = ref object
+    partition: string
+    size: int
+    offsetLag: int
+  LogDir = ref object
+    logDir: string
+    partitions: seq[KafkaPartition]
+  Broker = ref object
+    broker: int
+    logDirs: seq[LogDir]
+  TopicPartition* = ref object
+    brokerId*: int
+    topic*: string
+    partition*: int
+    size*: int
+    offsetLag*: int
+
+
+proc `$`*(topicPartition: TopicPartition): string = 
+  fmt"{topicPartition.topic} {topicPartition.brokerId} {topicPartition.partition} {topicPartition.size} {topicPartition.size/1000/1000:.2}MB"
+
+# given <topic-name>-<partition number> ex: my-topic-10 for partition 10 of my-topic
+let splitTopicFromPartitionRegex = re"""(.+)-([^-]+)"""
+proc splitTopicFromPartition*(topicPartition: string): tuple[topic: string, partition: int] =
+  let found = topicPartition.find(splitTopicFromPartitionRegex)
+  result = (topic: found.regexGroupValue(0), partition: found.regexGroupValue(1).parseInt)
+
+iterator topicPartitions*(describeOutput: string): TopicPartition =
+  # the second-to-last line holds the JSON we want, the other lines are garbage
+  let outputJson = describeOutput.splitLines[^2].parseJson["brokers"]
+  let brokers = to(outputJson, seq[Broker])
+
+  for broker in brokers:
+    let brokerId = broker.broker
+    for logDir in broker.logDirs:
+      for partition in logDir.partitions:
+        let topicAndPartition = partition.partition.splitTopicFromPartition
+        yield TopicPartition(brokerId: brokerId, 
+                             topic: topicAndPartition.topic,
+                             partition: topicAndPartition.partition,
+                             size: partition.size,
+                             offsetLag: partition.offsetLag)
+
+proc topicSize(self: ShellContext, command: EsqueCommand): int =
+  # TODO move to port 9092 if 9093
+  let shellCommand = self.kafkaLogDirs & 
+                  @["--bootstrap-server", 
+                    command.env, 
+                    "--topic-list", 
+                    command.topic,
+                    "--describe"] & command.remainingArgs
+  let (output, exitCode) = self.capture(shellCommand)
+  for topicPartition in output.topicPartitions:
+    echo $topicPartition
+  result = exitCode
+
 proc tailTopic(self: ShellContext, command: EsqueCommand): int =
   let shellCommand = self.kcat & @["-C", "-q", "-b", command.env, "-t",
       command.topic, "-o", "end"] & command.remainingArgs
@@ -186,35 +243,40 @@ proc runCommand*(self: ShellContext, command: EsqueCommand): int =
     of MessageAt: 0
     of Partition: 0
     of Search: 0
-    of Size: 0
+    of Size: self.topicSize(command)
     of Tail: self.tailTopic(command)
     of Version: self.version(command)
 
 
 when isMainModule:
   var shellContext = buildShellContext(true)
-  discard shellContext.runCommand(
-    EsqueCommand(kind: Cat, 
-                 env: "esque-kafka:9092",
-                 topic: "ten-partitions-lz4",
-                 remainingArgs: @["-c", "1", "-p", "0"]))
-  discard shellContext.runCommand(EsqueCommand(kind: First, env: "esque-kafka:9092",
-    topic: "ten-partitions-none",
-    remainingArgs: @["-p", "0", "-f", "%k %p %o\n"]))
-  discard shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092")) 
+  # discard shellContext.runCommand(
+  #   EsqueCommand(kind: Cat, 
+  #                env: "esque-kafka:9092",
+  #                topic: "ten-partitions-lz4",
+  #                remainingArgs: @["-c", "1", "-p", "0"]))
+  # discard shellContext.runCommand(EsqueCommand(kind: First, env: "esque-kafka:9092",
+  #   topic: "ten-partitions-none",
+  #   remainingArgs: @["-p", "0", "-f", "%k %p %o\n"]))
+  # discard shellContext.runCommand(EsqueCommand(kind: List, env: "esque-kafka:9092")) 
+
+  # discard shellContext.runCommand(
+  #   EsqueCommand(kind: Compression, 
+  #                env: "esque-kafka:9092",
+  #                topic: "ten-partitions-lz4",
+  #                remainingArgs: @["-p", "0"]))
+
+  # discard shellContext.runCommand(
+  #   EsqueCommand(kind: Config, 
+  #               env: "esque-kafka:9092",
+  #               topic: "ten-partitions-lz4"))
+
+  # discard shellContext.runCommand(
+  #   EsqueCommand(kind: Describe, 
+  #               env: "esque-kafka:9092",
+  #               topic: "ten-partitions-lz4"))
 
   discard shellContext.runCommand(
-    EsqueCommand(kind: Compression, 
-                 env: "esque-kafka:9092",
-                 topic: "ten-partitions-lz4",
-                 remainingArgs: @["-p", "0"]))
-
-  discard shellContext.runCommand(
-    EsqueCommand(kind: Config, 
-                env: "esque-kafka:9092",
-                topic: "ten-partitions-lz4"))
-
-  discard shellContext.runCommand(
-    EsqueCommand(kind: Describe, 
+    EsqueCommand(kind: Size, 
                 env: "esque-kafka:9092",
                 topic: "ten-partitions-lz4"))

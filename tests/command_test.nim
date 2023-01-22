@@ -4,6 +4,13 @@ import esquepkg/shell, esquepkg/commands
 func `==`(value1, value2: ShellCommand): bool =
   value1.command == value2.command and value1.args == value2.args
 
+func `==`(value1, value2: TopicPartition): bool =
+  value1.brokerId == value2.brokerId and 
+    value1.topic == value2.topic and
+    value1.partition == value2.partition and
+    value1.size == value2.size and
+    value1.offsetLag == value2.offsetLag
+
 let captureShellStub =
   (s: ShellContext, sc: ShellCommand) => (output: "stubbed!", exitCode: 0)
 
@@ -84,8 +91,8 @@ Topic: item-topic PartitionCount: 3	ReplicationFactor: 3	Configs: message.downco
 	Topic: item-topic Partition: 2	Leader: 29	Replicas: 29,58,59	Isr: 29,58,59  
     """
 
-    let myseq = describeTopicOutput.parseConfig.toSeq 
-    myseq === @[
+    let configs = describeTopicOutput.parseConfig.toSeq 
+    configs === @[
       (key: "message.downconversion.enable", value: "true"),
       (key: "min.insync.replicas", value: "2"),
       (key: "cleanup.policy", value: "compact,delete"),
@@ -100,6 +107,15 @@ Topic: item-topic PartitionCount: 3	ReplicationFactor: 3	Configs: message.downco
       (key: "retention.bytes", value: "-1"),
       (key: "delete.retention.ms", value: "86400000")]
 
+  test "parse size json into iterator":
+    let logDirsOutput = """Querying brokers for log directories information
+Received log directory information from brokers 1
+{"version":1,"brokers":[{"broker":1,"logDirs":[{"logDir":"/kafka/kafka-logs-d618b5e05bb4","error":null,"partitions":[{"partition":"ten-partitions-lz4-9","size":4427587,"offsetLag":0,"isFuture":false},{"partition":"ten-partitions-lz4-8","size":4428004,"offsetLag":0,"isFuture":false}]}]}]}
+"""
+    let topicPartitions = logDirsOutput.topicPartitions.toSeq
+    topicPartitions === @[
+      TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 9, size: 4427587),
+      TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 8, size: 4428004)]
 
 suite "test mocking of functions in the shell context":
   test "we can stub out the capture so that it returns what we want it to":
