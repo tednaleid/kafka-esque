@@ -12,3 +12,4 @@ bin           = @["esque"]
 # Dependencies
 
 requires "nim >= 1.6.10"
+requires "parsetoml >= 0.7.0"

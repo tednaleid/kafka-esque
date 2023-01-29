@@ -42,6 +42,24 @@ Install `choosenim` with:
   - where do they get stored/accessed?
 
 
+Config examples
+
+`kcat` and the confluent CLI tooling wants something that looks like this
+the public and private keys can be in the same file
+
+
+https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md
+
+Does it also support having the actual inline key?
+
+
+    security.protocol=ssl
+    ssl.ca.location=/path/to/client.pem
+    ssl.certificate.location=/path/to/client.pem
+    ssl.key.location=/path/to/client.pem
+    ssl.key.password=THEPASSWORD
+
+
 #### Release TODO
 - homebrew get osx mac working
   - https://github.com/tednaleid/homebrew-ganda/blob/master/Formula/ganda.rb

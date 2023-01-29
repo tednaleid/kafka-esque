@@ -193,7 +193,7 @@ iterator topicPartitions*(describeOutput: string): TopicPartition =
                              offsetLag: partition.offsetLag)
 
 proc topicSize(self: ShellContext, command: EsqueCommand): int =
-  # TODO move to port 9092 if 9093
+  # TODO move to port 9092 if 9093, or make this handle cert connection
   let shellCommand = self.kafkaLogDirs & 
                   @["--bootstrap-server", 
                     command.env, 
