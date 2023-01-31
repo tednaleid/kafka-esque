@@ -1,7 +1,6 @@
-import parsetoml
+import parsetoml, strformat, strutils
 
 #[
-
   Secrets (like PEM certificates and passwords) can be stored in an external file
 
   example contents, valid for kcat/confluent CLI tooling
@@ -20,8 +19,57 @@ import parsetoml
 
 ]#
 
+type
+  TopicConfig* = ref object
+    name*: string
+    broker*: string
+    port*: int
+    alias*: string
+    certificate*: string
+    password*: string
+    config*: string
+  EnvironmentConfig* = ref object
+    name*: string
+    broker*: string
+    port*: int
+    alias*: string
+    certificate*: string
+    password*: string
+    config*: string
+    filter*: string
+    topics*: seq[TopicConfig]
+  EsqueConfig* = ref object
+    # todo, overrides for kcat and other CLI apps?
+    environments*: seq[EnvironmentConfig]
+    
+
+proc `$`*(self: TopicConfig): string =
+  result = fmt"""{self.name}\t{self.alias}\t{self.broker}:{self.port}\t"""
+
+proc `$`*(self: EnvironmentConfig): string =
+  result = @[
+    self.name, 
+    self.alias, 
+    self.broker & ":" & $self.port
+  ].join("\t")
+
+proc `$`*(self: EsqueConfig): string =
+  result = $self.environments[0]
+
+proc parseEsqueConfig*(contents: string): EsqueConfig =
+  
+  let toml = parsetoml.parseString(contents)
+  let envs: seq[EnvironmentConfig] = @[EnvironmentConfig(name: "local", broker: "127.0.0.1", port: 9092)]
+  result = EsqueConfig(environments: envs)
 
 when isMainModule:
+  echo $parseEsqueConfig("""
+    [env.local]
+    broker = "127.0.0.1"
+    port = 9092
+    """)
+
+
   # check formatting with https://toolkit.site/format.html
   let testConfig = parsetoml.parseString("""
   [env.local]
@@ -56,4 +104,4 @@ when isMainModule:
   certificate = "/path/to/cert.pem" # passwordless, holds public/private/ca cert
   """)
 
-  parsetoml.dump(testConfig.getTable())
+  # parsetoml.dump(testConfig.getTable())
