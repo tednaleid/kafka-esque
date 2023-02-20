@@ -56,9 +56,15 @@ proc `$`*(self: EnvironmentConfig): string =
 proc `$`*(self: EsqueConfig): string =
   result = $self.environments[0]
 
+proc parseEnvironmentConfig*(table: TomlTableRef): EnvironmentConfig =
+  echo ""
+
 proc parseEsqueConfig*(contents: string): EsqueConfig =
   
   let toml = parsetoml.parseString(contents)
+
+  parsetoml.dump(toml.getTable())
+
   let envs: seq[EnvironmentConfig] = @[EnvironmentConfig(name: "local", broker: "127.0.0.1", port: 9092)]
   result = EsqueConfig(environments: envs)
 
@@ -102,6 +108,7 @@ when isMainModule:
   broker = "kafka-prod.company.com"
   port = 9093
   certificate = "/path/to/cert.pem" # passwordless, holds public/private/ca cert
+  foo.bar.baz = "value"
   """)
 
-  # parsetoml.dump(testConfig.getTable())
+  parsetoml.dump(testConfig.getTable())

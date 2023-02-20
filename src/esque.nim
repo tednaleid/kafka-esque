@@ -4,6 +4,10 @@ let parseResult = parseCliParams()
 
 case parseResult.kind:
   of Completed:
+    # TODO parse config here, call a method that finds the file
+    # allow it to be overridden with a -f flag from the parseResult?
+
+
     let command = parseResult.command
     let shellContext = buildShellContext(command.verbose)
     let exitCode = shellContext.runCommand(command)

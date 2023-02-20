@@ -9,6 +9,35 @@ type
       of None: nil
       of Single: value*: T
       of Multi: values*: seq[T]
+  Result*[T, E] = object
+    case o: bool
+    of false:
+      e: E
+    of true:
+      v: T
+  EitherKind = enum
+    ekLeft, ekRight
+  Either = ref object
+    case kind*: EitherKind 
+    of ekLeft: msg*: string
+    of ekRight: val*: tuple[parsed: seq[string], remaining:string]
+
+template ok*[T, E](R: type Result[T, E], x: untyped): R =
+  R(o: true, v: x)
+
+template err*[T, E](R: type Result[T, E], x: untyped): R =
+  ## Initialize the result to an error
+  ## Example: `Result[int, string].err("uh-oh")`
+  R(o: false, e: x)
+
+type R = Result[int, string]
+
+when isMainModule:
+  let res = R.ok 42
+  echo res
+
+  let resError = R.err "nope!"
+  echo resError
 
 proc log*(msg: string): void =
   stderr.writeLine(msg)

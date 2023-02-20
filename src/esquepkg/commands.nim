@@ -168,7 +168,14 @@ type
 
 
 proc `$`*(topicPartition: TopicPartition): string = 
-  fmt"{topicPartition.topic} {topicPartition.brokerId} {topicPartition.partition} {topicPartition.size} {topicPartition.size/1000/1000:.2}MB"
+  let size = topicPartition.size
+
+  if size < 1_000_000:
+    fmt"{topicPartition.topic} {topicPartition.brokerId} {topicPartition.partition} {topicPartition.size} {topicPartition.size div 1_000}KB"
+  elif size < 1_000_000_000:
+    fmt"{topicPartition.topic} {topicPartition.brokerId} {topicPartition.partition} {topicPartition.size} {topicPartition.size div 1_000_000}MB"
+  else: 
+    fmt"{topicPartition.topic} {topicPartition.brokerId} {topicPartition.partition} {topicPartition.size} {topicPartition.size div 1_000_000_000}GB"
 
 # given <topic-name>-<partition number> ex: my-topic-10 for partition 10 of my-topic
 let splitTopicFromPartitionRegex = re"""(.+)-([^-]+)"""

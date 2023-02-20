@@ -110,12 +110,21 @@ Topic: item-topic PartitionCount: 3	ReplicationFactor: 3	Configs: message.downco
   test "parse size json into iterator":
     let logDirsOutput = """Querying brokers for log directories information
 Received log directory information from brokers 1
-{"version":1,"brokers":[{"broker":1,"logDirs":[{"logDir":"/kafka/kafka-logs-d618b5e05bb4","error":null,"partitions":[{"partition":"ten-partitions-lz4-9","size":4427587,"offsetLag":0,"isFuture":false},{"partition":"ten-partitions-lz4-8","size":4428004,"offsetLag":0,"isFuture":false}]}]}]}
+{"version":1,"brokers":[{"broker":1,"logDirs":[{"logDir":"/kafka/kafka-logs-d618b5e05bb4","error":null,"partitions":[{"partition":"ten-partitions-lz4-9","size":75301373414,"offsetLag":0,"isFuture":false},{"partition":"ten-partitions-lz4-8","size":4428004,"offsetLag":0,"isFuture":false}]}]}]}
 """
     let topicPartitions = logDirsOutput.topicPartitions.toSeq
     topicPartitions === @[
-      TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 9, size: 4427587),
+      TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 9, size: 75301373414),
       TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 8, size: 4428004)]
+  test "topic partition output scales to size of topic":
+    $TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 8, size: 100) ===
+      "ten-partitions-lz4 1 8 100 0KB"
+    $TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 8, size: 1000) ===
+      "ten-partitions-lz4 1 8 1000 1KB"
+    $TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 8, size: 4428004) ===
+      "ten-partitions-lz4 1 8 4428004 4MB"
+    $TopicPartition(brokerId: 1, topic: "ten-partitions-lz4", partition: 9, size: 75301373414) ===
+      "ten-partitions-lz4 1 9 75301373414 75GB"
 
 suite "test mocking of functions in the shell context":
   test "we can stub out the capture so that it returns what we want it to":

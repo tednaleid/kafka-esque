@@ -36,8 +36,11 @@ Install `choosenim` with:
 
 - parse TOML config file (or json?)
   - this goes in ~/.config/esque
+    - https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    - $XDG_CONFIG_HOME defines the base directory relative to which user-specific configuration files should be stored. If $XDG_CONFIG_HOME is either not set or empty, a default equal to $HOME/.config should be used. 
     - symlinked?
-    - allow env variable override
+    - allow env variable override?
+    - output in verbose? mask passwords?
 - certificate passwords?
   - where do they get stored/accessed?
 
