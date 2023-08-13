@@ -9,7 +9,7 @@
 # 4. Create a Client keystore (JKS) that has the client's certificate that is signed by the CA
 # 5. Export a Client PEM (PKCS12, not password protected) file from the client keystore
 
-set -euxo pipefail
+set -euo pipefail
 
 command -v keytool >/dev/null 2>&1 || { echo "'keytool' is required to generate certs, it is part of the Java JDK" >&2; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo "'openssl' is required to generate certs" >&2; exit 1; }
@@ -109,5 +109,5 @@ export_pem_keypair_without_password $CLIENT_KEYSTORE_JKS $CLIENT_KEYSTORE_P12 $C
 ls $CERT_DIR
 
 echo after "docker-compose up" you can test the connectivity with
-echo openssl s_client -debug -connect localhost:9093 -tls1
+echo openssl s_client -debug -connect localhost:9093 -tls1_3
 

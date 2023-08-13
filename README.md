@@ -91,7 +91,41 @@ look at logs with:
 
 test connectivity to TLS/SSL port 9093 with:
 
+    openssl s_client -debug -connect localhost:9093
+
+    (shows the TLS 1.2)
+
     openssl s_client -debug -connect localhost:9093 -tls1
+
+    (won't return anything)
+
+    openssl s_client -debug -connect localhost:9093 -tls1_2 
+
+    (same output as no parameter, we're not offering tls1 support)
+
+    <snip>
+    Acceptable client certificate CA names
+    /C=US/ST=MN/L=Minneapolis/O=None/OU=None/CN=esque-kafka
+    Server Temp Key: ECDH, X25519, 253 bits
+    ---
+    SSL handshake has read 4708 bytes and written 120 bytes
+    ---
+    New, TLSv1/SSLv3, Cipher is ECDHE-RSA-CHACHA20-POLY1305
+    Server public key is 2048 bit
+    Secure Renegotiation IS supported
+    Compression: NONE
+    Expansion: NONE
+    No ALPN negotiated
+    SSL-Session:
+        Protocol  : TLSv1.2
+        Cipher    : ECDHE-RSA-CHACHA20-POLY1305
+        Session-ID: 82E6BCC03430D448B2BD040F7FB466EA6D39F813E8D797D91B43F7EC1A42E6DD
+        Session-ID-ctx: 
+        Master-Key: 82E82B7B18BB794DCC87F99DBFB7A0643E0A579822507315813E9C0CDEDDB38259D8A96220A9852726855534C001E387
+        Start Time: 1691964838
+        Timeout   : 7200 (sec)
+        Verify return code: 19 (self signed certificate in certificate chain)
+    ---
 
 See if `kcat` can list out the topics on the plaintext port 9092:
 
@@ -114,6 +148,7 @@ See if `kcat` can list out the topics on the TLS/SSL port 9093:
       -X ssl.key.location=local-dev/certs/client.pem \
       -X ssl.ca.location=local-dev/certs/ca.cert 
 
+
 Should emit something like:
 
     Metadata for all topics (from broker 1: ssl://esque-kafka:9093/1):
@@ -122,6 +157,10 @@ Should emit something like:
     1 topics:
       topic "testtopic" with 1 partitions:
         partition 0, leader 1, replicas: 1, isrs: 1
+
+To ignore cert checking (if you didn't modify the /etc/hosts file), you can disable hostname checking on `kcat` with:
+
+    -X ssl.endpoint.identification.algorithm=none
 
 ### clean up docker-compose containers and create sample topics loaded with data
 
