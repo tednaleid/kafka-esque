@@ -79,7 +79,7 @@ generate need to have a resolvable hostname.
 
 Generate certificates for the kafka container's use with:
 
-    local-dev/bin/generate-certs.ssh
+    local-dev/bin/generate-certs.sh
 
 Start docker containers (assuming docker/docker-compose are installed/running):
 
