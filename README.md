@@ -91,41 +91,66 @@ look at logs with:
 
 test connectivity to TLS/SSL port 9093 with:
 
-    openssl s_client -debug -connect localhost:9093
+    openssl s_client -connect esque-kafka:9093 -servername esque-kafka
 
-    (shows the TLS 1.2)
-
-    openssl s_client -debug -connect localhost:9093 -tls1
-
-    (won't return anything)
-
-    openssl s_client -debug -connect localhost:9093 -tls1_2 
-
-    (same output as no parameter, we're not offering tls1 support)
-
-    <snip>
-    Acceptable client certificate CA names
-    /C=US/ST=MN/L=Minneapolis/O=None/OU=None/CN=esque-kafka
+    CONNECTED(00000003)
+    depth=0 C = US, ST = MN, L = Minneapolis, O = None, OU = None, CN = esque-kafka
+    verify error:num=18:self signed certificate
+    verify return:1
+    depth=0 C = US, ST = MN, L = Minneapolis, O = None, OU = None, CN = esque-kafka
+    verify return:1
+    write W BLOCK
+    ---
+    Certificate chain
+    0 s:/C=US/ST=MN/L=Minneapolis/O=None/OU=None/CN=esque-kafka
+      i:/C=US/ST=MN/L=Minneapolis/O=None/OU=None/CN=esque-kafka
+    ---
+    Server certificate
+    -----BEGIN CERTIFICATE-----
+    MIIDTzCCAjcCFB8P4ShVK42GXLVTpHatMQkhK1DVMA0GCSqGSIb3DQEBCwUAMGQx
+    CzAJBgNVBAYTAlVTMQswCQYDVQQIDAJNTjEUMBIGA1UEBwwLTWlubmVhcG9saXMx
+    DTALBgNVBAoMBE5vbmUxDTALBgNVBAsMBE5vbmUxFDASBgNVBAMMC2VzcXVlLWth
+    ZmthMB4XDTIzMDgxMzIyNDQ0NFoXDTMzMDgxMDIyNDQ0NFowZDELMAkGA1UEBhMC
+    VVMxCzAJBgNVBAgTAk1OMRQwEgYDVQQHEwtNaW5uZWFwb2xpczENMAsGA1UEChME
+    Tm9uZTENMAsGA1UECxMETm9uZTEUMBIGA1UEAxMLZXNxdWUta2Fma2EwggEiMA0G
+    CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC23116tGOR6lrscAWXZsEuTSUptkdC
+    JGKegk1AhpA9pwzURNZOuItgKLtdrYVuJ+toI42nWrEzkfqbM1meNm9Pv1refkl0
+    x09JeLxcCii0H/Dm/ndzCIqSriNDMWyu8Kc6uDhGnNC6xyzciREUSbK0XzH1OSsB
+    HrizIon3u9IeYrezwnAbhkJl4WKhLokmbpBOs7uC9mVl6JAd9zYEmGyXZxivNN+4
+    UUEriwQdGZUG7Iyf11h2gD6OxeVWRWyrUdDlUnZNzH14Mz6MabAn87ViZRtX830I
+    gIrDZvh5UMq1LE9o0/xitKJy4dt+uqv4WGTk5l2o+FxCPn02vi/NirWVAgMBAAEw
+    DQYJKoZIhvcNAQELBQADggEBAELEqo97PlCCGv8kF288MJkRFYBzZqnnDEoNIvlX
+    SF/jPfSuWVVjFX9Qb7yoUb0hy7kZuJlIUy5FQxDtFckOmEXBsai3WnMebZUZUtNG
+    nHFuoGFRpqzLdWKoJwj/H+Ed64z6kdJblY4s9vjZnQLlQ9xymmxyrj9vHPd+zERf
+    mmJPKHc/iqnPe81JT5Tlq4bQC2LLVkz8/yKUgPG/ziuPExd1zVROK6TIRxOIMcHV
+    nRMYKbB8pmYiFecSpCyBEUkMYR5iThWPtbbriNyBUwaHcCQzmA4ZAhhNISW61jc1
+    8ft6qJ1U9cEyShrY3imRKbhF+HI8Nontu1lGKvkjAl/Gg+s=
+    -----END CERTIFICATE-----
+    subject=/C=US/ST=MN/L=Minneapolis/O=None/OU=None/CN=esque-kafka
+    issuer=/C=US/ST=MN/L=Minneapolis/O=None/OU=None/CN=esque-kafka
+    ---
+    No client certificate CA names sent
     Server Temp Key: ECDH, X25519, 253 bits
     ---
-    SSL handshake has read 4708 bytes and written 120 bytes
+    SSL handshake has read 1552 bytes and written 281 bytes
     ---
-    New, TLSv1/SSLv3, Cipher is ECDHE-RSA-CHACHA20-POLY1305
+    New, TLSv1/SSLv3, Cipher is AEAD-CHACHA20-POLY1305-SHA256
     Server public key is 2048 bit
-    Secure Renegotiation IS supported
+    Secure Renegotiation IS NOT supported
     Compression: NONE
     Expansion: NONE
     No ALPN negotiated
     SSL-Session:
-        Protocol  : TLSv1.2
-        Cipher    : ECDHE-RSA-CHACHA20-POLY1305
-        Session-ID: 82E6BCC03430D448B2BD040F7FB466EA6D39F813E8D797D91B43F7EC1A42E6DD
+        Protocol  : TLSv1.3
+        Cipher    : AEAD-CHACHA20-POLY1305-SHA256
+        Session-ID: 
         Session-ID-ctx: 
-        Master-Key: 82E82B7B18BB794DCC87F99DBFB7A0643E0A579822507315813E9C0CDEDDB38259D8A96220A9852726855534C001E387
-        Start Time: 1691964838
+        Master-Key: 
+        Start Time: 1691971573
         Timeout   : 7200 (sec)
-        Verify return code: 19 (self signed certificate in certificate chain)
+        Verify return code: 18 (self signed certificate)
     ---
+
 
 See if `kcat` can list out the topics on the plaintext port 9092:
 

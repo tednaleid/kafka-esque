@@ -88,7 +88,7 @@ create_certificate_authority_keypair
 create_CA_truststore
 
 # Server Keystore used by Kafka
-SERVER_HOSTNAME="127.0.0.1.xip.io"
+SERVER_HOSTNAME="esque-kafka"
 SERVER_KEYSTORE_JKS="$CERT_DIR/kafka.server.keystore.jks"
 SERVER_CSR="$CERT_DIR/server-csr"
 SERVER_CERT_SIGNED="$CERT_DIR/server-cert-signed"
